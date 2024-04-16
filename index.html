@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agora Video Call</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.2.js"></script>
+    <style>
+        #local_stream, #remote_stream {
+            width: 400px;
+            height: 300px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="local_stream"></div>
+    <div id="remote_stream"></div>
+
+    <script>
+        const appID = '2a7cd4d9002c4ae28fb2adc546d14027'; // App ID
+        const localStreamContainer = document.getElementById('local_stream');
+        const remoteStreamContainer = document.getElementById('remote_stream');
+
+        // Khởi tạo client Agora
+        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+        // Lắng nghe sự kiện khi có user publish stream
+        client.on('user-published', async (user, mediaType) => {
+            await client.subscribe(user, mediaType); // Subcribe đến user
+            if (mediaType === 'video') {
+                const remoteVideoTrack = user.videoTrack;
+                // Thêm video vào remote stream container
+                remoteVideoTrack.play(remoteStreamContainer);
+            }
+        });
+
+        // Lắng nghe sự kiện khi có lỗi xảy ra
+        client.on('error', err => {
+            console.error('AgoraRTC client error:', err);
+        });
+
+        // Join vào phòng họp khi trang web được tải
+        async function joinMeeting() {
+            const channelName = 'test'; // Tên của phòng họp
+            
+            try {
+                // Join vào phòng họp
+                await client.join(appID, channelName, null, null);
+
+                // Tạo local audio track
+                const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                
+                // Tạo local video track
+                const localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+                // Thêm video vào local stream container
+                localVideoTrack.play(localStreamContainer);
+
+                // Publish local stream
+                await client.publish([localVideoTrack, localAudioTrack]);
+
+                console.log('Joined the channel successfully');
+            } catch (error) {
+                console.error('Failed to join the channel:', error);
+            }
+        }
+
+        joinMeeting();
+    </script>
+</body>
+</html>
