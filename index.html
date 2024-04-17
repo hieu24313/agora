@@ -17,56 +17,63 @@
 <body>
     <div id="local_stream"></div>
     <div id="remote_stream"></div>
-
     <script>
-        const appID = '2a7cd4d9002c4ae28fb2adc546d14027'; // App ID
-        const localStreamContainer = document.getElementById('local_stream');
-        const remoteStreamContainer = document.getElementById('remote_stream');
-
-        // Khởi tạo client Agora
-        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-
-        // Lắng nghe sự kiện khi có user publish stream
-        client.on('user-published', async (user, mediaType) => {
-            await client.subscribe(user, mediaType); // Subcribe đến user
-            if (mediaType === 'video') {
-                const remoteVideoTrack = user.videoTrack;
-                // Thêm video vào remote stream container
-                remoteVideoTrack.play(remoteStreamContainer);
-            }
-        });
-
-        // Lắng nghe sự kiện khi có lỗi xảy ra
-        client.on('error', err => {
-            console.error('AgoraRTC client error:', err);
-        });
-
-        // Join vào phòng họp khi trang web được tải
         async function joinMeeting() {
-            const channelName = 'test'; // Tên của phòng họp
-            
+            const apiUrl = 'http://hieu24315.pythonanywhere.com/token/generate_token/';
+    
             try {
-                // Join vào phòng họp
-                await client.join(appID, channelName, null, null);
-
-                // Tạo local audio track
-                const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                
-                // Tạo local video track
-                const localVideoTrack = await AgoraRTC.createCameraVideoTrack();
-                // Thêm video vào local stream container
-                localVideoTrack.play(localStreamContainer);
-
-                // Publish local stream
-                await client.publish([localVideoTrack, localAudioTrack]);
-
-                console.log('Joined the channel successfully');
-            } catch (error) {
-                console.error('Failed to join the channel:', error);
+                // Gọi API để lấy token và userId từ máy chủ
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+    
+                // Xác định token và uid từ dữ liệu API trả về
+                const token = data.tokenRTC || null; // Sử dụng token từ dữ liệu API, nếu không có thì đặt là null
+                const uid = data.uid || null; // Sử dụng userId từ dữ liệu API, nếu không có thì đặt là null
+    
+                const localStreamContainer = document.getElementById('local_stream');
+                const remoteStreamContainer = document.getElementById('remote_stream');
+    
+                const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+    
+                client.on('user-published', async (user, mediaType) => {
+                    await client.subscribe(user, mediaType);
+                    if (mediaType === 'video') {
+                        const remoteVideoTrack = user.videoTrack;
+                        remoteVideoTrack.play(remoteStreamContainer);
+                    }
+                });
+    
+                client.on('error', err => {
+                    console.error('AgoraRTC client error:', err);
+                });
+    
+                const appID = '6d5049b6ee13472197020fe7c3117e6c'; // Thay thế bằng App ID của bạn
+                const channelName = 'call'; // Tên của phòng họp
+    
+                try {
+                    // Tham số của hàm join sử dụng token và uid lấy từ API
+                    await client.join(appID, channelName, token, uid);
+    
+                    const localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    const localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+                    localVideoTrack.play(localStreamContainer);
+    
+                    await client.publish([localVideoTrack, localAudioTrack]);
+    
+                    console.log('Joined the channel successfully');
+                } catch (joinError) {
+                    console.error('Failed to join the channel:', joinError);
+                }
+            } catch (fetchError) {
+                console.error('Failed to fetch token:', fetchError);
             }
         }
-
-        joinMeeting();
+    
+        joinMeeting(); // Gọi hàm joinMeeting để bắt đầu quá trình tham gia cuộc họp
     </script>
 </body>
 </html>
+
